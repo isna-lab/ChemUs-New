@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Berita Kimia - ChemUs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #FFFFFF;
+      color: #0D3B66;
+    }
+    .widget-container {
+      width: 100%;
+      overflow: hidden;
+      padding: 20px 0;
+    }
+    .widget-inner {
+      width: 90%;
+      max-width: 1000px;
+      margin: auto;
+    }
+    .widget-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 15px;
+      text-align: left;
+    }
+    .carousel {
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .carousel-track {
+      display: flex;
+      transition: transform 1s ease-in-out;
+    }
+    .carousel-item {
+      min-width: 100%;
+      box-sizing: border-box;
+      padding: 15px;
+      background: #F9F9F9;
+    }
+    .carousel-item img {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .carousel-item h3 {
+      font-size: 20px;
+      margin: 8px 0;
+      color: #0D3B66;
+    }
+    .carousel-item p {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #333;
+      margin-bottom: 8px;
+    }
+    .carousel-item a {
+      color: #00BFA6;
+      font-weight: 600;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <div class="widget-inner">
+      <div class="widget-title">🧪 Berita Kimia Terkini – ChemUs</div>
+      <div class="carousel">
+        <div id="carouselTrack" class="carousel-track"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const RSS_URL = "https://www.sciencedaily.com/news/matter_energy/chemistry/rss.xml";
+
+    async function fetchRSS(url) {
+      const proxy = "https://api.allorigins.win/raw?url=";
+      const resp = await fetch(proxy + encodeURIComponent(url));
+      const txt = await resp.text();
+      const parser = new DOMParser();
+      return parser.parseFromString(txt, "text/xml");
+    }
+
+    function getImageFromItem(item) {
+      const media = item.getElementsByTagName("media:content")[0];
+      if (media && media.getAttribute("url")) return media.getAttribute("url");
+      const enc = item.getElementsByTagName("enclosure")[0];
+      if (enc && enc.getAttribute("url")) return enc.getAttribute("url");
+      const desc = item.getElementsByTagName("description")[0]?.textContent || "";
+      const match = desc.match(/<img[^>]+src="([^">]+)"/);
+      return match ? match[1] : "";
+    }
+
+    function createNewsElement(item) {
+      const div = document.createElement("div");
+      div.className = "carousel-item";
+      const imgUrl = getImageFromItem(item);
+      if (imgUrl) {
+        const img = document.createElement("img");
+        img.src = imgUrl;
+        div.appendChild(img);
+      }
+      const title = item.querySelector("title")?.textContent || "Berita Kimia";
+      const link = item.querySelector("link")?.textContent || "#";
+      const desc = item.querySelector("description")?.textContent || "";
+      const h3 = document.createElement("h3");
+      const a = document.createElement("a");
+      a.href = link;
+      a.target = "_blank";
+      a.textContent = title;
+      h3.appendChild(a);
+      div.appendChild(h3);
+      const p = document.createElement("p");
+      const cleaned = desc.replace(/<img[^>]*>/g, "");
+      p.innerHTML = cleaned.length > 200 ? cleaned.slice(0, 200) + "…" : cleaned;
+      div.appendChild(p);
+      return div;
+    }
+
+    async function initCarousel() {
+      try {
+        const xml = await fetchRSS(RSS_URL);
+        const items = xml.querySelectorAll("item");
+        const track = document.getElementById("carouselTrack");
+        let count = 0;
+        for (const item of items) {
+          if (count >= 8) break;
+          track.appendChild(createNewsElement(item));
+          count++;
+        }
+        let index = 0;
+        const total = track.children.length;
+        setInterval(() => {
+          index = (index + 1) % total;
+          track.style.transform = `translateX(-${index * 100}%)`;
+        }, 6000);
+      } catch (err) {
+        console.error("Gagal load RSS:", err);
+      }
+    }
+
+    initCarousel();
+  </script>
+</body>
+</html>
